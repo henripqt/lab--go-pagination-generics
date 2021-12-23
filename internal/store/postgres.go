@@ -94,48 +94,6 @@ func (r *PGRepository) GetBlogCategories(ctx context.Context, paginationReq mode
 	return pRes, nil
 }
 
-// GetBlogCategories returns paginated blog categories
-func (r *PGRepository) GetBlogCategories(ctx context.Context, paginationReq models.PaginationRequest) (*models.PaginationResponse, error) {
-	query, queryArgs, err := r.sq.Select("*").From("blog_categories").ToSql()
-	if err != nil {
-		return nil, err
-	}
-
-	countQuery, countQueryArgs, err := r.sq.Select("count(*)").From("blog_categories").ToSql()
-	if err != nil {
-		return nil, err
-	}
-
-	rows, pRes, err := r.paginate(
-		ctx,
-		query,
-		queryArgs,
-		countQuery,
-		countQueryArgs,
-		paginationReq,
-	)
-
-	if err != nil {
-		return nil, err
-	}
-
-	defer rows.Close()
-
-	blogCategories := make([]models.BlogCategory, 0)
-	for rows.Next() {
-		var blogCategory models.BlogCategory
-		err := rows.StructScan(&blogCategory)
-		if err != nil {
-			return nil, err
-		}
-
-		blogCategories = append(blogCategories, blogCategory)
-	}
-
-	pRes.Items = blogCategories
-	return pRes, nil
-}
-
 // Close allows for closing the database connection
 func (r *PGRepository) Close() error {
 	return r.db.Close()

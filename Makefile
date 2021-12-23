@@ -1,6 +1,6 @@
 .PHONY: run
 run:
-	go run cmd/main.go
+	go1.18beta1 run cmd/main.go
 
 .PHONY: migrate-up
 migrate-up:
