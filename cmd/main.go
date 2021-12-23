@@ -68,7 +68,7 @@ func (a *API) handler() http.Handler {
 func (a *API) blogCategoriesHandler(w http.ResponseWriter, r *http.Request) {
 	paginationReq := a.parsePaginationReq(r)
 
-	pagingResponse, err := a.repository.GetBlogCategories(r.Context(), paginationReq)
+	paginationResponse, err := a.repository.GetBlogCategories(r.Context(), paginationReq)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -76,7 +76,7 @@ func (a *API) blogCategoriesHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	if err := json.NewEncoder(w).Encode(pagingResponse); err != nil {
+	if err := json.NewEncoder(w).Encode(paginationResponse); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -85,7 +85,7 @@ func (a *API) blogCategoriesHandler(w http.ResponseWriter, r *http.Request) {
 func (a *API) blogPostsHandler(w http.ResponseWriter, r *http.Request) {
 	paginationReq := a.parsePaginationReq(r)
 
-	pagingResponse, err := a.repository.GetBlogPosts(r.Context(), paginationReq)
+	paginationResponse, err := a.repository.GetBlogPosts(r.Context(), paginationReq)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -93,7 +93,7 @@ func (a *API) blogPostsHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	if err := json.NewEncoder(w).Encode(pagingResponse); err != nil {
+	if err := json.NewEncoder(w).Encode(paginationResponse); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}

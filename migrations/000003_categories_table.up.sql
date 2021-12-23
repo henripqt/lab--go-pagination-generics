@@ -1,5 +1,3 @@
-
-  
 CREATE TABLE IF NOT EXISTS blog_categories (
   id SERIAL PRIMARY KEY,
   title VARCHAR(100) NOT NULL,

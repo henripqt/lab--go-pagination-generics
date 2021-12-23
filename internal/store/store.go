@@ -8,8 +8,8 @@ import (
 
 // Repository is an interface that defines the methods that a store must implement
 type Repository interface {
-	GetBlogPosts(ctx context.Context, paginationReq models.PaginationRequest) (*models.PaginationResponse, error)
-	GetBlogCategories(ctx context.Context, paginationReq models.PaginationRequest) (*models.PaginationResponse, error)
+	GetBlogPosts(ctx context.Context, paginationReq models.PaginationRequest) (*models.PaginationResponse[[]models.BlogPost], error)
+	GetBlogCategories(ctx context.Context, paginationReq models.PaginationRequest) (*models.PaginationResponse[[]models.BlogCategory], error)
 	Close() error
 }
 
@@ -27,17 +27,14 @@ func NewReposoitory(r Repository) Repository {
 
 var _ Repository = (*repository)(nil)
 
-// GetBlogPosts returns paginated blog posts from the underlying Repository
-func (r *repository) GetBlogPosts(ctx context.Context, paginationReq models.PaginationRequest) (*models.PaginationResponse, error) {
+func (r *repository) GetBlogPosts(ctx context.Context, paginationReq models.PaginationRequest) (*models.PaginationResponse[[]models.BlogPost], error) {
 	return r.repository.GetBlogPosts(ctx, paginationReq)
 }
 
-// GetBlogPosts returns paginated blog categories from the underlying Repository
-func (r *repository) GetBlogCategories(ctx context.Context, paginationReq models.PaginationRequest) (*models.PaginationResponse, error) {
+func (r *repository) GetBlogCategories(ctx context.Context, paginationReq models.PaginationRequest) (*models.PaginationResponse[[]models.BlogCategory], error) {
 	return r.repository.GetBlogCategories(ctx, paginationReq)
 }
 
-// Close closes the underlying Repository connection
 func (r *repository) Close() error {
 	return r.repository.Close()
 }

@@ -9,9 +9,9 @@ type PaginationRequest struct {
 }
 
 // PaginationResponse is a struct that represents the response of a paginated request
-type PaginationResponse struct {
+type PaginationResponse[T any] struct {
 	Page       int         `json:"page"`
-	Items      interface{} `json:"items"`
+	Items      T           `json:"items"`
 	PerPage    int         `json:"perPage"`
 	PrevPage   int         `json:"prevPage"`
 	NextPage   int         `json:"nextPage"`

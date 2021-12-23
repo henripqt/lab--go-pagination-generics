@@ -15,6 +15,8 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+type PGPaginator[T any] []T
+
 type PGRepository struct {
 	sq squirrel.StatementBuilderType
 	db *sqlx.DB
@@ -34,8 +36,8 @@ func NewPGRepository(userName, password, dbName string) Repository {
 	}
 }
 
-// GetBLogPosts returns paginated blog posts
-func (r *PGRepository) GetBlogPosts(ctx context.Context, paginationReq models.PaginationRequest) (*models.PaginationResponse, error) {
+// GetBLogPosts returns all blog posts
+func (r *PGRepository) GetBlogPosts(ctx context.Context, paginationReq models.PaginationRequest) (*models.PaginationResponse[[]models.BlogPost], error) {
 	query, queryArgs, err := r.sq.Select("*").From("blog_posts").ToSql()
 	if err != nil {
 		return nil, err
@@ -46,7 +48,8 @@ func (r *PGRepository) GetBlogPosts(ctx context.Context, paginationReq models.Pa
 		return nil, err
 	}
 
-	rows, pRes, err := r.paginate(
+	pRes, err := PGPaginator[models.BlogPost]{}.paginate(
+		r.db,
 		ctx,
 		query,
 		queryArgs,
@@ -59,20 +62,35 @@ func (r *PGRepository) GetBlogPosts(ctx context.Context, paginationReq models.Pa
 		return nil, err
 	}
 
-	defer rows.Close()
+	return pRes, nil
+}
 
-	blogPosts := make([]models.BlogPost, 0)
-	for rows.Next() {
-		var blogPost models.BlogPost
-		err := rows.StructScan(&blogPost)
-		if err != nil {
-			return nil, err
-		}
-
-		blogPosts = append(blogPosts, blogPost)
+// GetBLogPosts returns all blog posts
+func (r *PGRepository) GetBlogCategories(ctx context.Context, paginationReq models.PaginationRequest) (*models.PaginationResponse[[]models.BlogCategory], error) {
+	query, queryArgs, err := r.sq.Select("*").From("blog_categories").ToSql()
+	if err != nil {
+		return nil, err
 	}
 
-	pRes.Items = blogPosts
+	countQuery, countQueryArgs, err := r.sq.Select("count(*)").From("blog_categories").ToSql()
+	if err != nil {
+		return nil, err
+	}
+
+	pRes, err := PGPaginator[models.BlogCategory]{}.paginate(
+		r.db,
+		ctx,
+		query,
+		queryArgs,
+		countQuery,
+		countQueryArgs,
+		paginationReq,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
 	return pRes, nil
 }
 
@@ -124,15 +142,16 @@ func (r *PGRepository) Close() error {
 }
 
 // paginate is a helper function for fetching paginated ressources
-func (r *PGRepository) paginate(
+func (r PGPaginator[T]) paginate(
+	db *sqlx.DB,
 	ctx context.Context,
 	query string,
 	queryArgs []interface{},
 	countQuery string,
 	countQueryArgs []interface{},
 	paginationReq models.PaginationRequest,
-) (*sqlx.Rows, *models.PaginationResponse, error) {
-	paginationRes := models.PaginationResponse{
+) (*models.PaginationResponse[[]T], error) {
+	paginationRes := models.PaginationResponse[[]T]{
 		Page:    paginationReq.Page,
 		PerPage: paginationReq.PerPage,
 	}
@@ -141,7 +160,7 @@ func (r *PGRepository) paginate(
 
 	// Retrieve the total number of items
 	g.Go(func() error {
-		return r.db.GetContext(
+		return db.GetContext(
 			ctx,
 			&paginationRes.TotalItems,
 			countQuery,
@@ -153,7 +172,7 @@ func (r *PGRepository) paginate(
 	var rows *sqlx.Rows
 	g.Go(func() error {
 		var err error
-		rows, err = r.db.QueryxContext(
+		rows, err = db.QueryxContext(
 			ctx,
 			r.decoratePaginatedQuery(query, paginationReq),
 			queryArgs...,
@@ -162,22 +181,36 @@ func (r *PGRepository) paginate(
 	})
 
 	if err := g.Wait(); err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
+	defer rows.Close()
+
+	items := make([]T, 0)
+	for rows.Next() {
+		var item T
+		err := rows.StructScan(&item)
+		if err != nil {
+			return nil, err
+		}
+
+		items = append(items, item)
+	}
+
+	paginationRes.Items = items
 	paginationRes.TotalPage = r.getTotalPage(int(paginationRes.TotalItems), paginationRes.PerPage)
 	paginationRes.PrevPage = r.getPrevPage(paginationRes.Page)
 	paginationRes.NextPage = r.getNextPage(paginationRes.Page, paginationRes.TotalPage)
-	return rows, &paginationRes, nil
+	return &paginationRes, nil
 }
 
 // getTotalPage is a helper function for getting the total number of pages
-func (r *PGRepository) getTotalPage(totalItems, perPage int) int {
+func (r PGPaginator[T]) getTotalPage(totalItems, perPage int) int {
 	return int(math.Ceil(float64(totalItems) / float64(perPage)))
 }
 
 // getPrevPage is a helper function for getting the previous page
-func (r *PGRepository) getPrevPage(currentPage int) int {
+func (r PGPaginator[T]) getPrevPage(currentPage int) int {
 	if currentPage >= 2 {
 		return currentPage - 1
 	}
@@ -185,14 +218,14 @@ func (r *PGRepository) getPrevPage(currentPage int) int {
 }
 
 // getNextPage is a helper function for getting the next page
-func (r *PGRepository) getNextPage(currentPage, totalPage int) int {
+func (r PGPaginator[T]) getNextPage(currentPage, totalPage int) int {
 	if currentPage >= totalPage {
 		return currentPage
 	}
 	return currentPage + 1
 }
 
-func (r *PGRepository) decoratePaginatedQuery(query string, pReq models.PaginationRequest) string {
+func (r PGPaginator[T]) decoratePaginatedQuery(query string, pReq models.PaginationRequest) string {
 	q := strings.Builder{}
 	q.WriteString(query)
 
