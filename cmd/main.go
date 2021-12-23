@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"syscall"
 
+	"github.com/go-chi/chi"
 	"github.com/henripqt/lab/pagination/internal/store"
 	"github.com/henripqt/lab/pagination/pkg/models"
 	"golang.org/x/sync/errgroup"
@@ -36,7 +37,7 @@ func main() {
 
 	httpServer := http.Server{
 		Addr:    ":8080",
-		Handler: http.HandlerFunc(api.blogPostsHandler),
+		Handler: api.handler(),
 	}
 
 	g, gCtx := errgroup.WithContext(ctx)
@@ -57,23 +58,32 @@ type API struct {
 	repository store.Repository
 }
 
+func (a *API) handler() http.Handler {
+	router := chi.NewMux()
+	router.Get("/blog/categories", a.blogCategoriesHandler)
+	router.Get("/blog/posts", a.blogPostsHandler)
+	return router
+}
+
+func (a *API) blogCategoriesHandler(w http.ResponseWriter, r *http.Request) {
+	paginationReq := a.parsePaginationReq(r)
+
+	pagingResponse, err := a.repository.GetBlogCategories(r.Context(), paginationReq)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(pagingResponse); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+}
+
 func (a *API) blogPostsHandler(w http.ResponseWriter, r *http.Request) {
-	sPage := r.URL.Query().Get("page")
-	page, err := strconv.Atoi(sPage)
-	if err != nil {
-		page = 1
-	}
-
-	sPerPage := r.URL.Query().Get("per_page")
-	perPage, err := strconv.Atoi(sPerPage)
-	if err != nil {
-		perPage = 10
-	}
-
-	paginationReq := models.PaginationRequest{
-		Page:    page,
-		PerPage: perPage,
-	}
+	paginationReq := a.parsePaginationReq(r)
 
 	pagingResponse, err := a.repository.GetBlogPosts(r.Context(), paginationReq)
 	if err != nil {
@@ -86,5 +96,24 @@ func (a *API) blogPostsHandler(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewEncoder(w).Encode(pagingResponse); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
+	}
+}
+
+func (a *API) parsePaginationReq(r *http.Request) models.PaginationRequest {
+	sPage := r.URL.Query().Get("page")
+	page, err := strconv.Atoi(sPage)
+	if err != nil {
+		page = 1
+	}
+
+	sPerPage := r.URL.Query().Get("per_page")
+	perPage, err := strconv.Atoi(sPerPage)
+	if err != nil {
+		perPage = 10
+	}
+
+	return models.PaginationRequest{
+		Page:    page,
+		PerPage: perPage,
 	}
 }

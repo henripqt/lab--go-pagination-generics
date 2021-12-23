@@ -34,8 +34,8 @@ func NewPGRepository(userName, password, dbName string) Repository {
 	}
 }
 
-// GetBLogPosts returns all blog posts
-func (r *PGRepository) GetBlogPosts(ctx context.Context, paginationReq models.PaginationRequest) (*models.PagingResponse, error) {
+// GetBLogPosts returns paginated blog posts
+func (r *PGRepository) GetBlogPosts(ctx context.Context, paginationReq models.PaginationRequest) (*models.PaginationResponse, error) {
 	query, queryArgs, err := r.sq.Select("*").From("blog_posts").ToSql()
 	if err != nil {
 		return nil, err
@@ -76,6 +76,48 @@ func (r *PGRepository) GetBlogPosts(ctx context.Context, paginationReq models.Pa
 	return pRes, nil
 }
 
+// GetBlogCategories returns paginated blog categories
+func (r *PGRepository) GetBlogCategories(ctx context.Context, paginationReq models.PaginationRequest) (*models.PaginationResponse, error) {
+	query, queryArgs, err := r.sq.Select("*").From("blog_categories").ToSql()
+	if err != nil {
+		return nil, err
+	}
+
+	countQuery, countQueryArgs, err := r.sq.Select("count(*)").From("blog_categories").ToSql()
+	if err != nil {
+		return nil, err
+	}
+
+	rows, pRes, err := r.paginate(
+		ctx,
+		query,
+		queryArgs,
+		countQuery,
+		countQueryArgs,
+		paginationReq,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	blogCategories := make([]models.BlogCategory, 0)
+	for rows.Next() {
+		var blogCategory models.BlogCategory
+		err := rows.StructScan(&blogCategory)
+		if err != nil {
+			return nil, err
+		}
+
+		blogCategories = append(blogCategories, blogCategory)
+	}
+
+	pRes.Items = blogCategories
+	return pRes, nil
+}
+
 // Close allows for closing the database connection
 func (r *PGRepository) Close() error {
 	return r.db.Close()
@@ -89,8 +131,8 @@ func (r *PGRepository) paginate(
 	countQuery string,
 	countQueryArgs []interface{},
 	paginationReq models.PaginationRequest,
-) (*sqlx.Rows, *models.PagingResponse, error) {
-	paginationRes := models.PagingResponse{
+) (*sqlx.Rows, *models.PaginationResponse, error) {
+	paginationRes := models.PaginationResponse{
 		Page:    paginationReq.Page,
 		PerPage: paginationReq.PerPage,
 	}

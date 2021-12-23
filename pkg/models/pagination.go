@@ -8,8 +8,8 @@ type PaginationRequest struct {
 	OrderDir string   `json:"orderDir" query:"order_dir"`
 }
 
-// PagingResponse is a struct that represents the response of a paginated request
-type PagingResponse struct {
+// PaginationResponse is a struct that represents the response of a paginated request
+type PaginationResponse struct {
 	Page       int         `json:"page"`
 	Items      interface{} `json:"items"`
 	PerPage    int         `json:"perPage"`
