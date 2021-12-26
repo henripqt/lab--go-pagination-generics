@@ -15,8 +15,6 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-type PGPaginator[T any] []T
-
 type PGRepository struct {
 	sq squirrel.StatementBuilderType
 	db *sqlx.DB
@@ -36,7 +34,7 @@ func NewPGRepository(userName, password, dbName string) Repository {
 	}
 }
 
-// GetBLogPosts returns all blog posts
+// GetBLogPosts returns paginated blog posts
 func (r *PGRepository) GetBlogPosts(ctx context.Context, paginationReq models.PaginationRequest) (*models.PaginationResponse[[]models.BlogPost], error) {
 	query, queryArgs, err := r.sq.Select("*").From("blog_posts").ToSql()
 	if err != nil {
@@ -48,7 +46,7 @@ func (r *PGRepository) GetBlogPosts(ctx context.Context, paginationReq models.Pa
 		return nil, err
 	}
 
-	pRes, err := PGPaginator[models.BlogPost]{}.paginate(
+	return PGPaginator[models.BlogPost]{}.paginate(
 		r.db,
 		ctx,
 		query,
@@ -57,15 +55,9 @@ func (r *PGRepository) GetBlogPosts(ctx context.Context, paginationReq models.Pa
 		countQueryArgs,
 		paginationReq,
 	)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return pRes, nil
 }
 
-// GetBLogPosts returns all blog posts
+// GetBLogPosts returns paginated blog categories
 func (r *PGRepository) GetBlogCategories(ctx context.Context, paginationReq models.PaginationRequest) (*models.PaginationResponse[[]models.BlogCategory], error) {
 	query, queryArgs, err := r.sq.Select("*").From("blog_categories").ToSql()
 	if err != nil {
@@ -77,7 +69,7 @@ func (r *PGRepository) GetBlogCategories(ctx context.Context, paginationReq mode
 		return nil, err
 	}
 
-	pRes, err := PGPaginator[models.BlogCategory]{}.paginate(
+	return PGPaginator[models.BlogCategory]{}.paginate(
 		r.db,
 		ctx,
 		query,
@@ -86,18 +78,14 @@ func (r *PGRepository) GetBlogCategories(ctx context.Context, paginationReq mode
 		countQueryArgs,
 		paginationReq,
 	)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return pRes, nil
 }
 
 // Close allows for closing the database connection
 func (r *PGRepository) Close() error {
 	return r.db.Close()
 }
+
+type PGPaginator[T any] []T
 
 // paginate is a helper function for fetching paginated ressources
 func (r PGPaginator[T]) paginate(

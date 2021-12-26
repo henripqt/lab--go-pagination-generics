@@ -1,6 +1,9 @@
 package models
 
-import "time"
+import (
+	"fmt"
+	"time"
+)
 
 // BlogPost is a struct that represents a blog post
 type BlogPost struct {
@@ -9,4 +12,8 @@ type BlogPost struct {
 	Body      string    `json:"body" db:"body"`
 	CreatedAt time.Time `json:"createdAt" db:"created_at"`
 	UpdatedAt time.Time `json:"updatedAt" db:"updated_at"`
+}
+
+func (b BlogPost) BlogPostMethod() string {
+	return fmt.Sprintf("I'm a blog post ! Title: %v", b.Title)
 }

@@ -1,6 +1,9 @@
 package models
 
-import "time"
+import (
+	"fmt"
+	"time"
+)
 
 // BlogCategory is a struct that represents a blog category
 type BlogCategory struct {
@@ -8,4 +11,8 @@ type BlogCategory struct {
 	Title     string    `json:"title" db:"title"`
 	CreatedAt time.Time `json:"createdAt" db:"created_at"`
 	UpdatedAt time.Time `json:"updatedAt" db:"updated_at"`
+}
+
+func (b BlogCategory) BlogCategoryMethod() string {
+	return fmt.Sprintf("I'm a blog category ! Title: %v", b.Title)
 }

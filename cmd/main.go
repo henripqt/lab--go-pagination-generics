@@ -74,6 +74,10 @@ func (a *API) blogCategoriesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	for _, post := range paginationResponse.Items {
+		fmt.Println(post.BlogCategoryMethod())
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	if err := json.NewEncoder(w).Encode(paginationResponse); err != nil {
@@ -89,6 +93,10 @@ func (a *API) blogPostsHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
+	}
+
+	for _, post := range paginationResponse.Items {
+		fmt.Println(post.BlogPostMethod())
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -112,8 +120,15 @@ func (a *API) parsePaginationReq(r *http.Request) models.PaginationRequest {
 		perPage = 10
 	}
 
+	orderBy := make([]string, 0)
+	for _, orderByParam := range r.URL.Query()["order_by"] {
+		orderBy = append(orderBy, orderByParam)
+	}
+
 	return models.PaginationRequest{
-		Page:    page,
-		PerPage: perPage,
+		Page:     page,
+		PerPage:  perPage,
+		OrderBy:  orderBy,
+		OrderDir: r.URL.Query().Get("order_dir"),
 	}
 }
